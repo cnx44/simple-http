@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
-/* Open the socket, set socket options and return the server file descriptor */
+// Open the socket, set socket options and return the server file descriptor 
 int open_server_socket(struct sockaddr_in* address){
 	//Open file descriptor via socket on ipv4, return -1 on error	
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -50,6 +50,8 @@ int open_server_socket(struct sockaddr_in* address){
 }
 
 
+//Look for waiting connections in queue, retry on error interrupt (EINTR)
+//and connection aborted (ECONNABORTED), return client_fd to the worker
 int accept_connection(int server_fd, struct sockaddr_in address){
 	socklen_t addrlen;
 	int client_fd;
