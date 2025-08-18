@@ -59,21 +59,32 @@ int accept_connection(int server_fd, struct sockaddr_in address){
 	while(1){
 		addrlen = sizeof(address);
 		client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
-		if(client_fd >= 0) return client_fd;
-		if(errno == EINTR || errno == ECONNABORTED) continue;
-		return -1;
+		if(client_fd >= 0) return client_fd; //if read correct socker return fd
+		if(errno == EINTR || errno == ECONNABORTED) continue; //on error try a new one
+		return -1; //on other error return -1 "fail"
 	}
 
 }
 
 ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size) {
-    if (!buffer || buffer_size == 0) return -1;
+    if (!buffer || buffer_size == 0){
+		errno = EINVAL; //invalid arguments
+		return -1; 
+	}
+	
+	//Guard loop, on syscal while reading retry 
+	while(1){
+		size_t read_size = buffer_size - 1;
+		ssize_t n = read(client_fd, buffer, read_size);
+		
+		if(n >= 0){ //Appen terminator char to ensure correct behaviour
+			buffer[n] = '\0';
+			return n;
+		}
 
-    ssize_t n = read(client_fd, buffer, buffer_size - 1);
-    if (n < 0) return -1; 
-
-    buffer[n] = '\0'; 
-    return n;
+		if(errno == EINTR) continue; //interrupt error
+		return -1;
+	}
 }
 
 ssize_t write_socket(int client_fd, char *buffer, size_t buffer_size) {
