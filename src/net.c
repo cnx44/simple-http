@@ -1,53 +1,30 @@
-/*
-TODO: HTTP/1.1 response headers (basic server)
-
-Response structure:
-    HTTP/1.1 <status-code> <reason-phrase>\r\n
-    <header-name>: <value>\r\n
-    ...
-    \r\n
-    [body]
-
-MINIMUM headers for compatibility:
-    - Content-Length: <bytes>   (or Transfer-Encoding: chunked)
-    - Content-Type: <mime>      (e.g. text/html, text/plain, application/json)
-    - Connection: close         (simpler; or keep-alive if supported)
-    - Date: <RFC1123 GMT date>  (strongly recommended)
-    - Server: <name/version>    (for debugging/compatibility)
-
-CONDITIONAL / CONTEXT headers:
-    - Location: <url>           (for 3xx redirects)
-    - Cache-Control, ETag, Last-Modified (for caching/conditional requests)
-    - Content-Encoding: gzip    (if compression is implemented)
-    - Allow: GET, POST          (for 405 Method Not Allowed)
-    - WWW-Authenticate: ...     (for 401 Unauthorized)
-
-Notes:
-    - In HTTP/1.1 connections are persistent by default if you do NOT use
-      Content-Length or chunked encoding, you must send "Connection: close"
-      and close the socket after the response.
-    - Some status codes (1xx, 204, 304, and responses to HEAD) MUST NOT have a body.
-*/
 #include "net.h"
 
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Open the socket and return the server file descriptor */
+/* Open the socket, set socket options and return the server file descriptor */
 int open_server_socket(struct sockaddr_in* address){
 	//Open file descriptor via socket on ipv4, return -1 on error	
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if(server_fd < 0) return -1;
+	if(server_fd < 0){
+		perror("Error on socket opening");
+		return -1; 
+	}
 
+
+	//port. Linux Kenrel distribute connections on the different socket
+	//binded to the port
 	int yes = 1;
-	//Enable binding on port even if it is in TIME_WAIT (fast restart)
 	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))){
 		perror("Error on setsocketop SO_REUSEADDR");
 		close(server_fd);
 		return -1;
 	}
-	//Enable multiple process/threads to bind the same port	
+	//SO_REUSEPORT allow to bind on port in TIME_WAITING, fast reboot 
+	//without waiting for time out timer
+	//SO_REUSEADDR allow multiple process/thread to run on the same 
 	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes))){
 		perror("Error on setsockopt SO_REUSEPORT");
 		close(server_fd);
@@ -75,7 +52,7 @@ int open_server_socket(struct sockaddr_in* address){
 int accept_connection(int server_fd, struct sockaddr_in address){
 	socklen_t addrlen = sizeof(address);
 	int	client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
-	if (client_fd < 1) {
+	if (client_fd < 0) {
 		perror("accept failed");
 		return -1;
 	}
