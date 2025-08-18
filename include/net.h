@@ -12,9 +12,7 @@ int accept_connection(int server_fd, struct sockaddr_in address);
 
 ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size);
 
-ssize_t write_socket(int client_fd, char* buffer, size_t buffer_size);
-
-ssize_t write_socket(int client_fd, char *buffer, size_t buffer_size);
+ssize_t write_socket(int client_fd, const void* buffer, size_t message_siz);
 
 void close_connection(int client_fd);
 

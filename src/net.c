@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
+#include <unistd.h>
 
 // Open the socket, set socket options and return the server file descriptor 
 int open_server_socket(struct sockaddr_in* address){
@@ -33,14 +35,14 @@ int open_server_socket(struct sockaddr_in* address){
 	}
 
 	//Bind port
-    if (bind(server_fd, (struct sockaddr*)address, sizeof(*address)) < 0) {
+    if (bind(server_fd, (struct sockaddr*)address, sizeof(*address)) < 0){
         perror("bind");
         close(server_fd);
         return -1;
     }
 
     //Set socket in listening mode
-    if (listen(server_fd, SOMAXCONN) < 0) {
+    if (listen(server_fd, SOMAXCONN) < 0){
         perror("listen");
         close(server_fd);
         return -1;
@@ -69,7 +71,7 @@ int accept_connection(int server_fd, struct sockaddr_in address){
 //Read buffer_size - 1 bytes from client's file descriptor and store them into
 //char* buffer, on syscal interrupt error retry, return ssize_t read bytes 
 //or -1 on error
-ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size) {
+ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size){
     if (!buffer || buffer_size == 0){
 		errno = EINVAL; //invalid arguments
 		return -1; 
@@ -90,15 +92,39 @@ ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size) {
 	}
 }
 
-ssize_t write_socket(int client_fd, char *buffer, size_t buffer_size) {
-    if (!buffer || buffer_size == 0)
-        return -1;
 
-    ssize_t n = write(client_fd, buffer, buffer_size);
-    if (n < 0) 
-        return -1;
+ssize_t write_socket(int client_fd, const void *buffer, size_t message_size){
+	if(!buffer || message_size == 0 || message_size > SSIZE_MAX){
+		errno = EINVAL; //Invalid arguments
+		return -1;	
+	}
+	
+	const unsigned char* remaining_message = buffer;
+	size_t left = message_size;
+	ssize_t total = 0;
 
-    return n;
+	while(1){
+		ssize_t written_bytes = write(client_fd, remaining_message, left);
+	
+		if(written_bytes > 0){
+			remaining_message += written_bytes;
+			left -= (size_t) written_bytes;
+			total += written_bytes;
+			if(left == 0) return total;
+		}
+		
+		//On interrupt error try to write the rest of the message	
+		if(written_bytes < 0 && errno == EINTR) continue;
+		//EAGAIN in modern POSIX is an alias for EWOULDBLOCK
+		//if the action would cause an interrupt we skip the rest
+		if(written_bytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+			if(total > 0) return total;
+			return -1;
+		}
+
+		return -1;
+	}
+
 }
 
 void close_connection(int client_fd){
