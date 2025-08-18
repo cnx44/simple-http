@@ -66,6 +66,9 @@ int accept_connection(int server_fd, struct sockaddr_in address){
 
 }
 
+//Read buffer_size - 1 bytes from client's file descriptor and store them into
+//char* buffer, on syscal interrupt error retry, return ssize_t read bytes 
+//or -1 on error
 ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size) {
     if (!buffer || buffer_size == 0){
 		errno = EINVAL; //invalid arguments
