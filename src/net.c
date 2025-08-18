@@ -1,78 +1,33 @@
-/* Current problems for future improvements
- *
- * DoS from server shutdown
- * close_connection() also closes server_fd.
- * After the first connection, the server dies.
- * An attacker sends 1 request -> service goes down.
- *
- * Tiny backlog (1) -> DoS/SYN flood
- * listen(server_fd, 1) creates a very small accept queue.
- * Just a few half-open connections are enough to saturate it
- * (SYN flood / half-connections) and block new clients.
- *
- * Slowloris / slow connections
- * Blocking sockets, no timeout/keep-alive/limits:
- * a client can drip-feed the header and occupy the only worker flow.
- * With a single-thread/simple loop server, this is an easy DoS.
- *
- * Fragile accept (shutdown and exit)
- * In accept_connection(), on error you close the server
- * and call exit(EXIT_FAILURE).
- * A transient error (EINTR, resource temporarily unavailable)
- * crashes everything -> remote DoS.
- *
- * Wrong check on accept
- * You check client_fd < 1. accept() may return 0 (valid if fd 0 is unused);
- * you would treat it as an error and kill the server.
- * Exploitable under certain conditions.
- *
- * Missing SO_REUSEADDR/SO_REUSEPORT
- * Hard to restart (TIME_WAIT).
- * An attacker can force many connections and prevent
- * you from restarting quickly on the same port.
- *
- * Overly broad binding
- * INADDR_ANY exposes on all interfaces.
- * If you wanted only local, now it’s public.
- * Risk of scans, bots, automated exploits.
- *
- * sockaddr_in struct not zeroed
- * You don’t memset(&address, 0, sizeof address).
- * Garbage fields (e.g. sin_zero) shouldn’t matter,
- * but it’s bad practice and can cause weird behavior.
- *
- * No SIGPIPE protection
- * If the client closes and you call write(),
- * you may get SIGPIPE and the process terminates.
- * Exploitable by opening/closing rapidly.
- *
- * Partial writes and memory leaks
- * write_socket() passes buffer_size to write(), not the actual length.
- * If buffer_size > strlen, you might send uninitialized data (info leak).
- * No handling of short writes: truncated response can be manipulated.
- *
- * Partial reads / incomplete protocol
- * read_socket() reads only once. HTTP can arrive in multiple chunks.
- * You might parse truncated or mixed requests,
- * leading to unpredictable behavior (request smuggling/desync
- * if later put behind a proxy).
- *
- * No limit on request size
- * Even if you avoid overflow, you can suffer resource exhaustion
- * (huge headers/bodies) or internal buffering that blocks the thread.
- *
- * No TLS
- * Traffic is cleartext: sniffing, MITM, theft of cookies/credentials.
- *
- * No isolation
- * If running as root and the process is exploited,
- * the host is compromised (no chroot/pledge/seccomp/priv-drop).
- *
- * IPv4-only
- * Not an attack, but limits scope;
- * closing IPv6 won’t save you from IPv4 scans.
- */
+/*
+TODO: HTTP/1.1 response headers (basic server)
 
+Response structure:
+    HTTP/1.1 <status-code> <reason-phrase>\r\n
+    <header-name>: <value>\r\n
+    ...
+    \r\n
+    [body]
+
+MINIMUM headers for compatibility:
+    - Content-Length: <bytes>   (or Transfer-Encoding: chunked)
+    - Content-Type: <mime>      (e.g. text/html, text/plain, application/json)
+    - Connection: close         (simpler; or keep-alive if supported)
+    - Date: <RFC1123 GMT date>  (strongly recommended)
+    - Server: <name/version>    (for debugging/compatibility)
+
+CONDITIONAL / CONTEXT headers:
+    - Location: <url>           (for 3xx redirects)
+    - Cache-Control, ETag, Last-Modified (for caching/conditional requests)
+    - Content-Encoding: gzip    (if compression is implemented)
+    - Allow: GET, POST          (for 405 Method Not Allowed)
+    - WWW-Authenticate: ...     (for 401 Unauthorized)
+
+Notes:
+    - In HTTP/1.1 connections are persistent by default if you do NOT use
+      Content-Length or chunked encoding, you must send "Connection: close"
+      and close the socket after the response.
+    - Some status codes (1xx, 204, 304, and responses to HEAD) MUST NOT have a body.
+*/
 #include "net.h"
 
 #include <unistd.h>
@@ -80,29 +35,39 @@
 #include <stdlib.h>
 
 /* Open the socket and return the server file descriptor */
-int open_server_socket(){
-	int server_fd;
-	struct sockaddr_in address;
+int open_server_socket(struct sockaddr_in* address){
+	//Open file descriptor via socket on ipv4, return -1 on error	
+	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if(server_fd < 0) return -1;
 
-	server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd < 0)	return server_fd;
-
-	address.sin_family = AF_INET;			//AF_INET is used for ipv4 (AF_INET6 for ipv6)
-    address.sin_addr.s_addr = INADDR_ANY;	//INADDR_ANY = 0.0.0.0, listening on all interfaces
-    address.sin_port = htons(PORT);			//Set listening port to 8080 (PORT)
-	
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        close(server_fd);
-		perror("bind failed");
+	int yes = 1;
+	//Enable binding on port even if it is in TIME_WAIT (fast restart)
+	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))){
+		perror("Error on setsocketop SO_REUSEADDR");
+		close(server_fd);
 		return -1;
-	}	
-
-	if (listen(server_fd, 1) < 0) {
-        perror("listen failed");
-        close(server_fd);
+	}
+	//Enable multiple process/threads to bind the same port	
+	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes))){
+		perror("Error on setsockopt SO_REUSEPORT");
+		close(server_fd);
 		return -1;
 	}
 
+	//Bind port
+    if (bind(server_fd, (struct sockaddr*)address, sizeof(*address)) < 0) {
+        perror("bind");
+        close(server_fd);
+        return -1;
+    }
+
+    //Set socket in listening mode
+    if (listen(server_fd, SOMAXCONN) < 0) {
+        perror("listen");
+        close(server_fd);
+        return -1;
+    }
+	
 	return server_fd;
 }
 
@@ -138,7 +103,7 @@ ssize_t write_socket(int client_fd, char *buffer, size_t buffer_size) {
     return n;
 }
 
-void close_connection(int client_fd, int server_fd){
+void close_connection(int client_fd){
 	close(client_fd);
-	close(server_fd);
 } 
+
