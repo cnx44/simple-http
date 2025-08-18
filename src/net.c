@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 /* Open the socket, set socket options and return the server file descriptor */
 int open_server_socket(struct sockaddr_in* address){
@@ -50,13 +51,17 @@ int open_server_socket(struct sockaddr_in* address){
 
 
 int accept_connection(int server_fd, struct sockaddr_in address){
-	socklen_t addrlen = sizeof(address);
-	int	client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
-	if (client_fd < 0) {
-		perror("accept failed");
+	socklen_t addrlen;
+	int client_fd;
+
+	while(1){
+		addrlen = sizeof(address);
+		client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+		if(client_fd >= 0) return client_fd;
+		if(errno == EINTR || errno == ECONNABORTED) continue;
 		return -1;
 	}
-	return client_fd;
+
 }
 
 ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size) {
