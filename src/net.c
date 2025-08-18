@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <unistd.h>
+#include <poll.h>
 
 // Open the socket, set socket options and return the server file descriptor 
 int open_server_socket(struct sockaddr_in* address){
@@ -93,7 +94,9 @@ ssize_t read_socket(int client_fd, char* buffer, size_t buffer_size){
 }
 
 
-ssize_t write_socket(int client_fd, const void *buffer, size_t message_size){
+// Write to client_fd the content of buffer and return the ssize_t with the 
+// number of bytes written, on severe failuer return -1 as per nothing written
+ssize_t write_socket(int client_fd, const void* buffer, size_t message_size){
 	if(!buffer || message_size == 0 || message_size > SSIZE_MAX){
 		errno = EINVAL; //Invalid arguments
 		return -1;	
@@ -105,7 +108,8 @@ ssize_t write_socket(int client_fd, const void *buffer, size_t message_size){
 
 	while(1){
 		ssize_t written_bytes = write(client_fd, remaining_message, left);
-	
+		
+		//Write what it can and eventually return
 		if(written_bytes > 0){
 			remaining_message += written_bytes;
 			left -= (size_t) written_bytes;
@@ -127,7 +131,23 @@ ssize_t write_socket(int client_fd, const void *buffer, size_t message_size){
 
 }
 
-void close_connection(int client_fd){
-	close(client_fd);
+//Shutdown the writing side, then keep reading until the timeout > 0
+//or the client close the connection. Returns 0 on closing fd correctly
+// -1 else
+int close_connection(int client_fd, int drain_timouts_ms){
+	shutdown(client_fd, SHUT_WR); //Close the Writing-channel on the socket
+	
+	if(drain_timouts_ms > 0){
+		//It notify us when we can read client_fd without blocking
+		struct pollfd pool_fd = {.fd = client_fd, .events = POLL_IN};
+		while(1){
+			int poll_result = poll(&pool_fd, 1, drain_timouts_ms);
+			if(poll_result <= 0) break; //Timeout or error
+			char buffer[MESSAGE_SIZE];	
+			ssize_t read_byte = read(client_fd, buffer, sizeof(buffer));
+			if(read_byte <= 0) break; //EOF or error
+		}
+	}
+	return close(client_fd); //return 0 on all right, -1 else
 } 
 
