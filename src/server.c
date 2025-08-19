@@ -45,4 +45,6 @@ int main(){
 		printf("MESSAGE: %s\nMESSAGE SIZE: %d\n", ret_msg, written_byte);
 		cnt++;
 	}	
-	return EXIT_SUCCESS; }
+
+	return EXIT_SUCCESS; 
+}
