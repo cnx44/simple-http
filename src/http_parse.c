@@ -26,7 +26,7 @@ void header_parser(char* request_message, struct request_header* request_ptr){
 	do{
 		request_message = read_next_line(request_message);
 		printf("%s\n", message_line);	
-	}while(*request_message != '\r');
+	}while(*request_message != '\r' && *(request_message+1) != '\n');
 
 
 	printf("%zd\n", request_ptr->content_length);
