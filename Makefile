@@ -20,6 +20,10 @@ build:
 clean:
 	rm -rf build $(TARGET)
 
+# Target per compilare in debug
+debug: CFLAGS = -Wall -Wextra -g -O0 -std=c11
+debug: clean $(TARGET)
+
 -include $(DEP)
 
-.PHONY: clean
+.PHONY: clean debug

@@ -2,6 +2,12 @@
 #define HTTP_PARSE_H
 
 #include <sys/types.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+
+#define MSG_LENGTH 819
 
 enum http_method {
 	HTTP_GET,
