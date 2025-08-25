@@ -45,7 +45,6 @@ int main(){
 		int written_byte = write_socket(client_fd, ret_msg, strlen(ret_msg));
 		if(written_byte == -1) return EXIT_FAILURE;
 
-		printf("MESSAGE: %s\nMESSAGE SIZE: %d\n", ret_msg, written_byte);
 		cnt++;
 	}	
 
