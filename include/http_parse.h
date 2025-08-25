@@ -19,10 +19,10 @@ enum http_method {
 };
 
 enum http_version{
-	HTTP_1_0,
-	HTTP_1_1,
-	HTTP_2_0,
-	HTTP_UNSUPPORTED
+	HTTP_1_0 = 10,
+	HTTP_1_1 = 11,
+	HTTP_2_0 = 20,
+	HTTP_UNSUPPORTED = -1
 };
 
 enum connection{
