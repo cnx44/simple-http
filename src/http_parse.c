@@ -109,6 +109,17 @@ void header_host_parser(char* walker, struct request_header* request_ptr){
 	strcpy(request_ptr->host, word);
 }
 
+
+void header_connection_parser(char* walker, struct request_header* request_ptr){
+	char word[MSG_LENGTH / 8] = {0};
+	walker = read_word(word, walker, sizeof(word));
+	if(strcmp(word, "keep-alive") == 0){
+	request_ptr->connection = KEEP_ALIVE;
+	}else{
+	request_ptr->connection = CLOSE;
+	}
+}
+
 // Read request_message string and populate struct request_header
 void header_parser(char* request_message, struct request_header* request_ptr){
 	char word[MSG_LENGTH / 8];
@@ -132,12 +143,7 @@ void header_parser(char* request_message, struct request_header* request_ptr){
 			}else if(strcmp(word, "host:") == 0){
 				header_host_parser(walker, request_ptr);
 			}else if(strcmp(word, "connection:") == 0){
-				walker = read_word(word, walker, sizeof(word));
-				if(strcmp(word, "keep-alive") == 0){
-					request_ptr->connection = KEEP_ALIVE;
-				}else{
-					request_ptr->connection = CLOSE;
-				}
+				header_connection_parser(walker, request_ptr);
 			}
  
 		}
