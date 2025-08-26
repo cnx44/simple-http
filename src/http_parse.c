@@ -1,8 +1,6 @@
 /*
 EXAMPLE REQUEST
 
-GET / HTTP/1.1
-Host: 127.0.0.1:8080
 Connection: keep-alive
 Cache-Control: max-age=0
 sec-ch-ua: "Chromium";v="139", "Not;A=Brand";v="99"
@@ -128,16 +126,28 @@ void header_parser(char* request_message, struct request_header* request_ptr){
         char *walker = message_line;
         while (*walker != '\0') {
             walker = read_word(word, walker, sizeof(word));
-		
 
 			if(strcmp(word, "get") == 0){
 				header_get_parser(walker, request_ptr);	
 			}else if(strcmp(word, "host:") == 0){
 				header_host_parser(walker, request_ptr);
+			}else if(strcmp(word, "connection:") == 0){
+				walker = read_word(word, walker, sizeof(word));
+				if(strcmp(word, "keep-alive") == 0){
+					request_ptr->connection = KEEP_ALIVE;
+				}else{
+					request_ptr->connection = CLOSE;
+				}
 			}
+ 
 		}
     }
 
 	printf("HTTP version: %d\n", request_ptr->version);
 	printf("Host address: %s\n", request_ptr->host);
+	if(request_ptr->connection == KEEP_ALIVE){
+		printf("Connection: KEEP_ALIVE\n");
+	}else{
+		printf("Connection: CLOSE\n");
+	}
 }
