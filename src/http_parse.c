@@ -83,7 +83,7 @@ char* read_word(char* word, char* str_ptr, int word_len){
 }
 
 
-void header_get_parser(char *walker, struct request_header* request_ptr){
+void header_get_parser(char* walker, struct request_header* request_ptr){
 	char word[MSG_LENGTH / 8] = {0};
 	walker = read_word(word, walker, sizeof(word));
 	size_t path_size = strlen(word) + 1;
@@ -100,6 +100,15 @@ void header_get_parser(char *walker, struct request_header* request_ptr){
 	}else{
 		request_ptr->version = HTTP_UNSUPPORTED;
 	}
+}
+
+void header_host_parser(char* walker, struct request_header* request_ptr){
+	char word[MSG_LENGTH / 8] = {0};
+	walker = read_word(word, walker, sizeof(word));
+	size_t host_len = strlen(word) + 1;
+	request_ptr->host = malloc(host_len * sizeof(char));
+	//TODO: handle error on malloc
+	strcpy(request_ptr->host, word);
 }
 
 // Read request_message string and populate struct request_header
@@ -124,11 +133,7 @@ void header_parser(char* request_message, struct request_header* request_ptr){
 			if(strcmp(word, "get") == 0){
 				header_get_parser(walker, request_ptr);	
 			}else if(strcmp(word, "host:") == 0){
-				walker = read_word(word, walker, sizeof(word));
-				size_t host_len = strlen(word) + 1;
-				request_ptr->host = malloc(host_len * sizeof(char));
-				//TODO: handle error on malloc
-				strcpy(request_ptr->host, word);
+				header_host_parser(walker, request_ptr);
 			}
 		}
     }
