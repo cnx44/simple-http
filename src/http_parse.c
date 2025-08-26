@@ -123,9 +123,16 @@ void header_parser(char* request_message, struct request_header* request_ptr){
 
 			if(strcmp(word, "get") == 0){
 				header_get_parser(walker, request_ptr);	
+			}else if(strcmp(word, "host:") == 0){
+				walker = read_word(word, walker, sizeof(word));
+				size_t host_len = strlen(word) + 1;
+				request_ptr->host = malloc(host_len * sizeof(char));
+				//TODO: handle error on malloc
+				strcpy(request_ptr->host, word);
 			}
 		}
     }
 
 	printf("HTTP version: %d\n", request_ptr->version);
+	printf("Host address: %s\n", request_ptr->host);
 }
