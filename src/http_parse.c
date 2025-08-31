@@ -1,24 +1,3 @@
-/*
-EXAMPLE REQUEST
-
-Connection: keep-alive
-Cache-Control: max-age=0
-sec-ch-ua: "Chromium";v="139", "Not;A=Brand";v="99"
-sec-ch-ua-mobile: ?0
-sec-ch-ua-platform: "macOS"
-Upgrade-Insecure-Requests: 1
-DNT: 1
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36
-Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,;q=0.8,application/signed-exchange;v=b3;q=0.7
-Sec-Fetch-Site: cross-site
-Sec-Fetch-Mode: navigate
-Sec-Fetch-User: ?1
-Sec-Fetch-Dest: document
-Accept-Encoding: gzip, deflate, br, zstd
-Accept-Language: it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7
- */
-
-
 #include "http_parse.h"
 
 char message_line[MSG_LENGTH];
@@ -82,11 +61,32 @@ char* read_word(char* word, char* str_ptr, int word_len){
 
 
 void header_get_parser(char* walker, struct request_header* request_ptr){
-	char word[MSG_LENGTH / 8] = {0};
+	char word[WRD_LENGTH] = {0};
 	walker = read_word(word, walker, sizeof(word));
 	size_t path_size = strlen(word) + 1;
 	request_ptr->request_target = malloc(path_size * sizeof(char));
 	strcpy(request_ptr->request_target, word);
+
+	size_t query_separator = 0;
+	while(query_separator < path_size && word[query_separator] != '?') query_separator++;	
+
+	if(query_separator < path_size && word[query_separator] == '?'){
+		request_ptr->path = malloc((query_separator+1)*sizeof(char));
+		memcpy(request_ptr->path, word, query_separator);
+		request_ptr->path[query_separator] = '\0'; 
+		
+		size_t query_start = query_separator + 1;
+		size_t query_len	= path_size - query_start;
+		request_ptr->query = malloc((query_len)*sizeof(char));
+		memcpy(request_ptr->query, word + query_start, query_len);
+		//request_ptr->query should catch the \0 from word
+		//if(!request_ptr->path || !request_ptr->query) //TODO: handle memroy allocation failure
+	}else{	// no query
+		request_ptr->path = malloc(path_size * sizeof(char));
+		request_ptr->query = NULL; 
+		strcpy(request_ptr->path, request_ptr->request_target);
+	}
+	
 
 	walker = read_word(word, walker, sizeof(word));
 	if(strcmp(word, "http/1.1") == 0){
@@ -156,4 +156,8 @@ void header_parser(char* request_message, struct request_header* request_ptr){
 	}else{
 		printf("Connection: CLOSE\n");
 	}
+
+
+	printf("Request path: %s\n", request_ptr->path);
+	if(request_ptr->query) printf("Request query: %s\n", request_ptr->query);
 }

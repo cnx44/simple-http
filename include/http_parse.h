@@ -8,6 +8,7 @@
 
 
 #define MSG_LENGTH 819
+#define WRD_LENGTH MSG_LENGTH / 8
 
 enum http_method {
 	HTTP_GET,
@@ -36,12 +37,13 @@ enum transfer_encoding{
 };
 
 struct request_header{				//EXAMPLE:
-	enum http_method method;		//HTTP_GET
-	enum http_version version;		//HTTP
-	char* host;						// www.example.com 
-	char* request_target;			//"/index.html?id=43"
+	enum http_method method;		//HTTP_GET done
+	enum http_version version;		//HTTP done
+	char* host;						// www.example.com done
+	char* request_target;			//"/index.html?id=43" done
 	char* path;						//"/index.html"
-	enum connection connection;		//KEEP_ALIVE
+	char* query;					// id=43
+	enum connection connection;		//KEEP_ALIVE done
 	enum transfer_encoding encode;	//CHUNKED
 	ssize_t content_length;			//123	(-1 for no content_length)
 };
