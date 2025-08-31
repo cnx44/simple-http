@@ -59,7 +59,7 @@ char* read_word(char* word, char* str_ptr, int word_len){
 	return str_ptr;
 }
 
-
+// Populate the request_target, path, query and version fields in request_header struct
 void header_get_parser(char* walker, struct request_header* request_ptr){
 	char word[WRD_LENGTH] = {0};
 	walker = read_word(word, walker, sizeof(word));
@@ -100,6 +100,7 @@ void header_get_parser(char* walker, struct request_header* request_ptr){
 	}
 }
 
+// Populate the host field in request_header struct
 void header_host_parser(char* walker, struct request_header* request_ptr){
 	char word[MSG_LENGTH / 8] = {0};
 	walker = read_word(word, walker, sizeof(word));
@@ -110,6 +111,7 @@ void header_host_parser(char* walker, struct request_header* request_ptr){
 }
 
 
+//Populate the connection field in request_header struct
 void header_connection_parser(char* walker, struct request_header* request_ptr){
 	char word[MSG_LENGTH / 8] = {0};
 	walker = read_word(word, walker, sizeof(word));
@@ -145,19 +147,21 @@ void header_parser(char* request_message, struct request_header* request_ptr){
 			}else if(strcmp(word, "connection:") == 0){
 				header_connection_parser(walker, request_ptr);
 			}
- 
 		}
     }
-
-	printf("HTTP version: %d\n", request_ptr->version);
-	printf("Host address: %s\n", request_ptr->host);
-	if(request_ptr->connection == KEEP_ALIVE){
-		printf("Connection: KEEP_ALIVE\n");
-	}else{
-		printf("Connection: CLOSE\n");
-	}
-
-
-	printf("Request path: %s\n", request_ptr->path);
-	if(request_ptr->query) printf("Request query: %s\n", request_ptr->query);
 }
+
+
+/* HEADER PRINTER DEBUG
+printf("HTTP version: %d\n", request_ptr->version);
+printf("Host address: %s\n", request_ptr->host);
+if(request_ptr->connection == KEEP_ALIVE){
+printf("Connection: KEEP_ALIVE\n");
+}else{
+printf("Connection: CLOSE\n");
+}
+
+
+printf("Request path: %s\n", request_ptr->path);
+if(request_ptr->query) printf("Request query: %s\n", request_ptr->query);
+*/
