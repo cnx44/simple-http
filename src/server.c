@@ -3,6 +3,7 @@
 #include <string.h>
 #include "net.h"
 #include "http_parse.h"
+#include "http_resp.h"
 
 #define PORT 8080
 #define MESSAGE_SIZE 8192
@@ -30,21 +31,12 @@ int main(){
 		if(!header) exit(EXIT_FAILURE);
 
 		header_parser(buffer, header);
-
-		char ret_msg[512];
-
 		
-		snprintf(ret_msg, sizeof(ret_msg),
-			"HTTP/1.1 200 OK\r\n"
-			"Content-Type: text/html\r\n"
-			"Connection: close\r\n"
-			"\r\n"
-			"<html><body><h1>200 OK! cnt = %d</h1></body></html>",
-			cnt);
+		char msg[32];
+		sprintf(msg, "counter number: %d", cnt);
+		message_sender(client_fd, msg, header);
 
-		int written_byte = write_socket(client_fd, ret_msg, strlen(ret_msg));
-		if(written_byte == -1) return EXIT_FAILURE;
-
+		close_connection(client_fd, 1000);		//TODO: Handle return value
 		cnt++;
 	}	
 

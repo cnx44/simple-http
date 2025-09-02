@@ -29,3 +29,16 @@ Notes:
     - Some status codes (1xx, 204, 304, and responses to HEAD) MUST NOT have a body.
 */
 
+#ifndef HTTP_RESP_H
+#define HTTP_RESP_H
+
+#include "http_parse.h"
+#include "net.h"
+#include "string.h"
+#include "stdlib.h"
+
+char* header_builder(struct request_header* request_hd);
+
+void message_sender(int client_fd, char* message, struct request_header* request_hd);
+
+#endif

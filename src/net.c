@@ -136,17 +136,18 @@ ssize_t write_socket(int client_fd, const void* buffer, size_t message_size){
 // -1 else
 int close_connection(int client_fd, int drain_timouts_ms){
 	shutdown(client_fd, SHUT_WR); //Close the Writing-channel on the socket
-	
+ 
+
 	if(drain_timouts_ms > 0){
-		//It notify us when we can read client_fd without blocking
-		struct pollfd pool_fd = {.fd = client_fd, .events = POLL_IN};
-		while(1){
-			int poll_result = poll(&pool_fd, 1, drain_timouts_ms);
-			if(poll_result <= 0) break; //Timeout or error
-			char buffer[MESSAGE_SIZE];	
-			ssize_t read_byte = read(client_fd, buffer, sizeof(buffer));
-			if(read_byte <= 0) break; //EOF or error
-		}
+	//It notify us when we can read client_fd without blocking
+	struct pollfd pool_fd = {.fd = client_fd, .events = POLL_IN};
+	while(1){
+	int poll_result = poll(&pool_fd, 1, drain_timouts_ms);
+	if(poll_result <= 0) break; //Timeout or error
+	char buffer[MESSAGE_SIZE];	
+	ssize_t read_byte = read(client_fd, buffer, sizeof(buffer));
+	if(read_byte <= 0) break; //EOF or error
+	}
 	}
 	return close(client_fd); //return 0 on all right, -1 else
 } 
