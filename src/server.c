@@ -35,6 +35,8 @@ int main(){
 		char msg[32];
 		sprintf(msg, "counter number: %d", cnt);
 		message_sender(client_fd, msg, header);
+		
+		printf("%s\n", buffer);
 
 		close_connection(client_fd, 1000);		//TODO: Handle return value
 		cnt++;

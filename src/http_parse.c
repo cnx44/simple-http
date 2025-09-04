@@ -125,7 +125,7 @@ void header_connection_parser(char* walker, struct request_header* request_ptr){
 // Read request_message string and populate struct request_header
 void header_parser(char* request_message, struct request_header* request_ptr){
 	char word[MSG_LENGTH / 8];
-	
+
     while (*request_message != '\0') {
         // Read the current line and update the pointer
         request_message = read_next_line(request_message);
