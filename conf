@@ -1,2 +1,4 @@
-index: "websources/pages/index.html"
-favico: "websources/cute-ghost.png"
+pages:			websources/pages 
+index:			websources/pages/index.html
+favico:			websources/cute-ghost.png
+error_pages:	websources/errors
