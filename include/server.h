@@ -13,4 +13,6 @@ struct environment_var{
 	char* error_pages;
 };
 
+extern struct environment_var env;
+
 #endif

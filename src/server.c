@@ -6,12 +6,14 @@
 #include "http_parse.h"
 #include "http_resp.h"
 
+struct environment_var env;
+
 void enviroment_parser(struct environment_var* environment, char* path){
 	FILE* file_ptr;
 	char line_buffer[LINE_SIZE];
 	char* word_buffer;
 	int word_len;
-	char delim[] = " \t";
+	char delim[] = " \t\r\n";
 		
 	file_ptr = fopen(path, "r");
 	if(!file_ptr){
@@ -81,10 +83,7 @@ int main(int argc, char *argv[]){
 		exit(EXIT_FAILURE);
 	}
 	
-	struct environment_var env;
 	enviroment_parser(&env, argv[1]);
-
-	int cnt = 0;
 	
 	struct sockaddr_in address;
 
@@ -103,17 +102,15 @@ int main(int argc, char *argv[]){
 		
 		struct request_header* header = malloc(sizeof(struct request_header));
 		if(!header) exit(EXIT_FAILURE);
-
+	
 		header_parser(buffer, header);
 		
-		char msg[32];
-		sprintf(msg, "counter number: %d", cnt);
-		message_sender(client_fd, msg, header);
+		char* ret_msg = message_builder(header); 
+		write_socket(client_fd, ret_msg, strlen(ret_msg));
 		
-		printf("%s\n", buffer);
+		free(ret_msg);
 
 		close_connection(client_fd, 1000);		//TODO: Handle return value
-		cnt++;
 	}	
 
 	return EXIT_SUCCESS; 

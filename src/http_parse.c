@@ -151,7 +151,6 @@ void header_parser(char* request_message, struct request_header* request_ptr){
     }
 }
 
-
 /* HEADER PRINTER DEBUG
 printf("HTTP version: %d\n", request_ptr->version);
 printf("Host address: %s\n", request_ptr->host);
