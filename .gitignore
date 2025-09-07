@@ -9,8 +9,6 @@ http_server
 
 compile_commands.json
 
-websources/
-
 guide
 
 *~
