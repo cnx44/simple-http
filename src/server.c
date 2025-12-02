@@ -99,17 +99,28 @@ int main(int argc, char *argv[]){
 
 		int read_byte = read_socket(client_fd, buffer, MESSAGE_SIZE);
 		if(read_byte == -1) return EXIT_FAILURE;
-		
-		struct request_header* header = malloc(sizeof(struct request_header));
-		if(!header) exit(EXIT_FAILURE);
-	
+
+		//printf("%s\n", buffer);
+
+		struct request_header* header = calloc(1, sizeof(struct request_header));
+		if(!header) {
+			close_connection(client_fd, 1000);		//TODO: Handle return value
+			continue;
+		}
 		header_parser(buffer, header);
-		
+
+		if(!header->path){
+			fprintf(stderr, "Invalid request");
+			close_connection(client_fd, 1000);		//TODO: Handle return value
+			continue;
+		}
+
 		char* ret_msg = message_builder(header); 
 		write_socket(client_fd, ret_msg, strlen(ret_msg));
 		
 		free(ret_msg);
 
+	
 		close_connection(client_fd, 1000);		//TODO: Handle return value
 	}	
 
